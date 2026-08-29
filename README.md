@@ -1,5 +1,7 @@
 # dsh-ssh-terminal
 
+🌏 [English](README_EN.md) · [中文](README.md)
+
 SSH 远程终端：在 `dsh-better-sidebar` 侧边栏里连接远程主机，**逐步查看 agent 输入的命令和输出**，不影响对话主流程；同时为 Agent 提供 SSH 工具。
 
 ![SSH 终端面板](docs/screenshot.png)

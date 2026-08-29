@@ -1,5 +1,7 @@
 # dsh-ssh-terminal
 
+🌏 [English](README_EN.md) · [中文](README.md)
+
 An SSH terminal tab for [dsh-better-sidebar](https://github.com/omdsh-dev/DSH-better-sidebar): connect to a remote host and **watch the agent's commands and output step by step**, without touching the main conversation. Also ships SSH tools for the agent.
 
 ![SSH terminal panel](docs/screenshot.png)
