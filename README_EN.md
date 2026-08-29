@@ -13,6 +13,19 @@ An SSH terminal tab for [dsh-better-sidebar](https://github.com/omdsh-dev/DSH-be
 - **Agent tools** (standalone): `ssh_connect` / `ssh_exec` / `ssh_disconnect` / `ssh_status` / `ssh_list`.
 - **Local history persistence**: the record survives restarts on this machine (saved to `~/.dsh/ssh-terminal-history.json`); the "清空当前" button clears only the selected connection's history.
 
+### Use the DSH SSH tools from Codex
+
+`mcp/server.js` is a local STDIO MCP bridge. It forwards Codex tool calls to the running DSH plugin; DSH continues to own the SSH processes and sidebar transcript. Start DSH and make sure the plugin is loaded, then run in PowerShell:
+
+```powershell
+codex mcp add dsh-ssh-terminal -- node "F:\Yang\测试\dsh-ssh-terminal\mcp\server.js"
+codex mcp list
+```
+
+Restart Codex Desktop and type `/mcp` in the composer. Once `dsh-ssh-terminal` appears, Codex can use `ssh_connect`, `ssh_exec`, `ssh_status`, `ssh_list`, and `ssh_disconnect`. If `node` is not on PATH, replace it with `C:\Program Files\nodejs\node.exe`. The bridge defaults to `http://127.0.0.1:43120/ssh-terminal/api`; override it with the `DSH_SSH_API` environment variable when needed.
+
+For parallel tasks, keep the `connectionId` returned by `ssh_connect` and pass it to every subsequent call for that connection.
+
 ### Multi-task usage
 
 Parallel tasks must keep the `connectionId` returned by `ssh_connect` and pass it to subsequent `ssh_exec`, `ssh_status`, and `ssh_disconnect` calls. Different connection IDs can run concurrently; commands on one connection are queued in order so they cannot interleave writes to the same SSH PTY. Calls without an ID remain compatible with the current active connection.
@@ -49,6 +62,7 @@ After installing, **hard-refresh** the browser (Cmd/Ctrl+Shift+R). Client change
 | `lib/index.js` | **Host half**: spawns and isolates multiple `ssh -tt` sessions by `connectionId`, keeps transcripts, registers tools + `/ssh-terminal/api` HTTP route |
 | `lib/client.js` | **Client half**: registers the "SSH 终端" tab via `ctx.betterSidebar.registerTab` + connection list and isolated transcript UI |
 | `src/client/index.tsx` | Client source (tsdown build entry) |
+| `mcp/server.js` | Local Codex MCP bridge (STDIO → DSH `/ssh-terminal/api`) |
 | `tsdown.config.ts` | client build config |
 | `cordis.patch.yml` | bundle mount patch |
 
