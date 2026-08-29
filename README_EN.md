@@ -9,8 +9,13 @@ An SSH terminal tab for [dsh-better-sidebar](https://github.com/omdsh-dev/DSH-be
 ## Features
 
 - **better-sidebar "SSH 终端" tab**: appears in the sidebar `+` menu. Opens a panel with a connection form, a command input, and a **live command→output transcript** (timestamps, theme-aware colors).
-- **Agent tools** (standalone): `ssh_connect` / `ssh_exec` / `ssh_disconnect` / `ssh_status`.
-- **Local history persistence**: the record survives restarts on this machine (saved to `~/.dsh/ssh-terminal-history.json`); a "清空记录" (clear history) button in the panel clears it manually.
+- **Concurrent connections**: every `ssh_connect` creates an isolated SSH process, output buffer, and command queue. The sidebar lists all connections and switches to the selected transcript.
+- **Agent tools** (standalone): `ssh_connect` / `ssh_exec` / `ssh_disconnect` / `ssh_status` / `ssh_list`.
+- **Local history persistence**: the record survives restarts on this machine (saved to `~/.dsh/ssh-terminal-history.json`); the "清空当前" button clears only the selected connection's history.
+
+### Multi-task usage
+
+Parallel tasks must keep the `connectionId` returned by `ssh_connect` and pass it to subsequent `ssh_exec`, `ssh_status`, and `ssh_disconnect` calls. Different connection IDs can run concurrently; commands on one connection are queued in order so they cannot interleave writes to the same SSH PTY. Calls without an ID remain compatible with the current active connection.
 
 ## Dependencies
 
@@ -41,8 +46,8 @@ After installing, **hard-refresh** the browser (Cmd/Ctrl+Shift+R). Client change
 
 | File | Purpose |
 | --- | --- |
-| `lib/index.js` | **Host half**: spawns `ssh -tt`, keeps the transcript, registers tools + `/ssh-terminal/api` HTTP route |
-| `lib/client.js` | **Client half**: registers the "SSH 终端" tab via `ctx.betterSidebar.registerTab` + live transcript UI |
+| `lib/index.js` | **Host half**: spawns and isolates multiple `ssh -tt` sessions by `connectionId`, keeps transcripts, registers tools + `/ssh-terminal/api` HTTP route |
+| `lib/client.js` | **Client half**: registers the "SSH 终端" tab via `ctx.betterSidebar.registerTab` + connection list and isolated transcript UI |
 | `src/client/index.tsx` | Client source (tsdown build entry) |
 | `tsdown.config.ts` | client build config |
 | `cordis.patch.yml` | bundle mount patch |

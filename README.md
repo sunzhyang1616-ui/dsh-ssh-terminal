@@ -9,8 +9,13 @@ SSH 远程终端：在 `dsh-better-sidebar` 侧边栏里连接远程主机，**�
 ## 功能
 
 - **Better-sidebar「SSH 终端」tab**：右侧栏 `+` 菜单里出现，点击即打开面板，含连接表单 + 命令输入 + **实时命令→输出转录**（带时间戳、颜色跟随 DSH 皮肤）。
-- **Agent 工具**（独立可用）：`ssh_connect` / `ssh_exec` / `ssh_disconnect` / `ssh_status`。
-- **记录持久化**：本机会话内跨重启保留（写盘到 `~/.dsh/ssh-terminal-history.json`），面板右上角「清空记录」可手动清空。
+- **多连接并行**：每次 `ssh_connect` 都会创建独立的 SSH 进程、输出缓冲和命令队列；侧边栏左侧列出各连接，点击即可切换对应转录。
+- **Agent 工具**（独立可用）：`ssh_connect` / `ssh_exec` / `ssh_disconnect` / `ssh_status` / `ssh_list`。
+- **记录持久化**：本机会话内跨重启保留（写盘到 `~/.dsh/ssh-terminal-history.json`），面板右上角「清空当前」只清理当前选中连接的记录。
+
+### 多任务调用约定
+
+并行任务必须保存 `ssh_connect` 返回的 `connectionId`，后续对同一主机的 `ssh_exec`、`ssh_status`、`ssh_disconnect` 都传入它。不同 `connectionId` 的命令可以同时执行；同一个连接内的命令会按调用顺序排队，避免写入同一个 SSH PTY 时互相串线。旧调用不传 ID 时仍兼容当前活动连接。
 
 ## 依赖
 
@@ -41,8 +46,8 @@ dsh plugin add github:sunzhyang1616-ui/dsh-ssh-terminal
 
 | 文件 | 说明 |
 | --- | --- |
-| `lib/index.js` | **Host 半**：启动 `ssh -tt`、维护转录、注册工具 + `/ssh-terminal/api` HTTP 路由 |
-| `lib/client.js` | **Client 半**：`ctx.betterSidebar.registerTab` 注册「SSH 终端」tab + 实时转录 UI |
+| `lib/index.js` | **Host 半**：按 `connectionId` 启动和隔离多个 `ssh -tt`、维护转录、注册工具 + `/ssh-terminal/api` HTTP 路由 |
+| `lib/client.js` | **Client 半**：`ctx.betterSidebar.registerTab` 注册「SSH 终端」tab + 多连接列表和独立转录 UI |
 | `src/client/index.tsx` | Client 源码（tsdown 构建入口） |
 | `tsdown.config.ts` | client 构建配置 |
 | `cordis.patch.yml` | bundle 挂载补丁 |
