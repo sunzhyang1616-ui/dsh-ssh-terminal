@@ -71,6 +71,7 @@
     "LICENSE",
     "README.md",
     "cordis.patch.yml",
+    "docs",
     "lib"
   ]
 }
