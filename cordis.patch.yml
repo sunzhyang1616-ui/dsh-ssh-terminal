@@ -1,0 +1,4 @@
+# dsh-ssh-terminal bundle mount
+- insert:
+    - id: ssh-terminal
+      name: dsh-ssh-terminal

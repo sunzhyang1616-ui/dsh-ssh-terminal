@@ -1,0 +1,76 @@
+{
+  "name": "dsh-ssh-terminal",
+  "version": "0.1.0",
+  "description": "SSH 远程终端：在 dsh-better-sidebar 侧边栏里连接远程主机，逐步查看命令与输出。",
+  "author": "sunzhyang1616-ui",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sunzhyang1616-ui/dsh-ssh-terminal.git"
+  },
+  "homepage": "https://github.com/sunzhyang1616-ui/dsh-ssh-terminal#readme",
+  "bugs": {
+    "url": "https://github.com/sunzhyang1616-ui/dsh-ssh-terminal/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "ssh",
+    "cordis",
+    "better-sidebar",
+    "dsh-better-sidebar"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "typecheck": "tsc --noEmit"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [],
+      "platform": "web"
+    }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1",
+    "react": "^18.3.1",
+    "dsh-better-sidebar": ">=0.12.0"
+  },
+  "peerDependenciesMeta": {
+    "dsh-better-sidebar": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.0",
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.1",
+    "lightningcss": "^1.33.0",
+    "react": "^18.3.1",
+    "tsdown": "^0.22.14",
+    "typescript": "^5.6.3"
+  },
+  "files": [
+    "CHANGELOG.md",
+    "LICENSE",
+    "README.md",
+    "cordis.patch.yml",
+    "lib"
+  ]
+}
