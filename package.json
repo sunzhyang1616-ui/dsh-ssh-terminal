@@ -36,8 +36,7 @@
   },
   "scripts": {
     "build": "tsdown",
-    "typecheck": "tsc --noEmit",
-    "mcp": "node mcp/server.js"
+    "typecheck": "tsc --noEmit"
   },
   "dsh": {
     "bundle": {
@@ -74,7 +73,6 @@
     "README_EN.md",
     "cordis.patch.yml",
     "docs",
-    "lib",
-    "mcp"
+    "lib"
   ]
 }

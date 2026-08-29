@@ -13,19 +13,6 @@ SSH 远程终端：在 `dsh-better-sidebar` 侧边栏里连接远程主机，**�
 - **Agent 工具**（独立可用）：`ssh_connect` / `ssh_exec` / `ssh_disconnect` / `ssh_status` / `ssh_list`。
 - **记录持久化**：本机会话内跨重启保留（写盘到 `~/.dsh/ssh-terminal-history.json`），面板右上角「清空当前」只清理当前选中连接的记录。
 
-### 让 Codex 使用 DSH SSH 工具
-
-本包里的 `mcp/server.js` 是一个本地 STDIO MCP 桥接器，负责把 Codex 的调用转发给正在运行的 DSH 插件；SSH 进程和侧边栏记录仍由 DSH 管理。先启动 DSH 并确认插件已加载，然后在 PowerShell 执行：
-
-```powershell
-codex mcp add dsh-ssh-terminal -- node "F:\Yang\测试\dsh-ssh-terminal\mcp\server.js"
-codex mcp list
-```
-
-重启 Codex Desktop，在输入框中执行 `/mcp`，看到 `dsh-ssh-terminal` 后即可让 Codex 使用 `ssh_connect`、`ssh_exec`、`ssh_status`、`ssh_list` 和 `ssh_disconnect`。如果 `node` 不在 PATH 中，把命令替换为 `C:\Program Files\nodejs\node.exe`。DSH 默认 API 地址是 `http://127.0.0.1:43120/ssh-terminal/api`；也可以通过 `DSH_SSH_API` 环境变量覆盖。
-
-并行任务仍要保存 `ssh_connect` 返回的 `connectionId`，并在后续调用中传回同一个 ID。
-
 ### 多任务调用约定
 
 并行任务必须保存 `ssh_connect` 返回的 `connectionId`，后续对同一主机的 `ssh_exec`、`ssh_status`、`ssh_disconnect` 都传入它。不同 `connectionId` 的命令可以同时执行；同一个连接内的命令会按调用顺序排队，避免写入同一个 SSH PTY 时互相串线。旧调用不传 ID 时仍兼容当前活动连接。
@@ -62,7 +49,6 @@ dsh plugin add github:sunzhyang1616-ui/dsh-ssh-terminal
 | `lib/index.js` | **Host 半**：按 `connectionId` 启动和隔离多个 `ssh -tt`、维护转录、注册工具 + `/ssh-terminal/api` HTTP 路由 |
 | `lib/client.js` | **Client 半**：`ctx.betterSidebar.registerTab` 注册「SSH 终端」tab + 多连接列表和独立转录 UI |
 | `src/client/index.tsx` | Client 源码（tsdown 构建入口） |
-| `mcp/server.js` | Codex 本地 MCP 桥接器（STDIO → DSH `/ssh-terminal/api`） |
 | `tsdown.config.ts` | client 构建配置 |
 | `cordis.patch.yml` | bundle 挂载补丁 |
 
