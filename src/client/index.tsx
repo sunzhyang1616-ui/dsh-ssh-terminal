@@ -27,8 +27,13 @@ const SSH_CSS = `
 .dshssh-session-copy{min-width:0;display:flex;flex-direction:column;gap:2px;}
 .dshssh-session-name,.dshssh-session-meta{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .dshssh-session-name{font-weight:600;}
+.dshssh-pin{color:var(--dsw-alias-accent,#facc15);margin-right:3px;}
 .dshssh-session-meta{color:var(--dsw-alias-label-tertiary,#94a3b8);font-size:10px;}
 .dshssh-empty{padding:6px;color:var(--dsw-alias-label-tertiary,#94a3b8);font-size:11px;}
+.dshssh-context-menu{position:fixed;z-index:1000;display:flex;flex-direction:column;min-width:140px;padding:4px;border:1px solid var(--dsw-alias-border-l2,rgba(148,163,184,.4));border-radius:7px;background:var(--dsw-alias-bg-layer-3,#252529);box-shadow:0 8px 24px rgba(0,0,0,.35);}
+.dshssh-context-menu button{padding:6px 8px;border:0;border-radius:5px;background:transparent;color:var(--dsw-alias-label-primary,inherit);text-align:left;cursor:pointer;font-size:12px;}
+.dshssh-context-menu button:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(148,163,184,.15));}
+.dshssh-context-menu button.danger{color:var(--dsw-alias-state-error-primary,#fca5a5);}
 .dshssh-main{display:flex;flex-direction:column;gap:8px;flex:1;min-width:0;min-height:0;}
 .dshssh-form{display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
 .dshssh-input{padding:4px 7px;border-radius:6px;border:1px solid var(--dsw-alias-border-l2,rgba(148,163,184,.4));background:var(--dsw-alias-bg-layer-3,rgba(2,6,23,.5));color:var(--dsw-alias-label-primary,inherit);font-size:12px;min-width:70px;}
@@ -82,9 +87,11 @@ function SshBody(props) {
   const [target, setTarget] = useState('')
   const [steps, setSteps] = useState([])
   const [logEl, setLogEl] = useState(null)
+  const [contextMenu, setContextMenu] = useState(null)
   const refreshSeq = useRef(0)
 
   const selectedSession = sessions.find((s) => s.connectionId === connectionId)
+  const contextSession = contextMenu && sessions.find((s) => s.connectionId === contextMenu.connectionId)
   const canRun = connected && !!selectedSession && !!selectedSession.connected
 
   async function refresh(preferredId) {
@@ -166,10 +173,30 @@ function SshBody(props) {
     } catch (e) { setErr(String((e && e.message) || e)) }
   }
 
+  async function togglePinned(id) {
+    setContextMenu(null)
+    try {
+      const r = await callApi('pin', { connectionId: id })
+      if (r && r.error) setErr(String(r.error))
+      await refresh(id)
+    } catch (e) { setErr(String((e && e.message) || e)) }
+  }
+
+  async function deleteRecord(id) {
+    const session = sessions.find((s) => s.connectionId === id)
+    setContextMenu(null)
+    if (!session || !window.confirm('删除该连接记录吗？在线连接不会断开。')) return
+    try {
+      const r = await callApi('delete', { connectionId: id })
+      if (r && r.error) setErr(String(r.error))
+      await refresh(id)
+    } catch (e) { setErr(String((e && e.message) || e)) }
+  }
+
   const onKey = (e) => { if (e.key === 'Enter' && canRun && !busy) run() }
   const status = connected ? ('● ' + target) : (selectedSession ? (selectedSession.exited ? '○ 已退出' : '○ 未连接') : '○ 未选择连接')
 
-  return createElement('div', { className: 'dshssh-body' },
+  return createElement('div', { className: 'dshssh-body', onClick: () => setContextMenu(null) },
     createElement('div', { className: 'dshssh-head' },
       createElement('span', { className: 'dshssh-title' }, 'SSH 远程终端'),
       createElement('span', { className: 'dshssh-status ' + (connected ? 'ok' : 'off') }, status),
@@ -184,10 +211,20 @@ function SshBody(props) {
               key: s.connectionId,
               className: 'dshssh-session' + (s.connectionId === connectionId ? ' selected' : ''),
               onClick: () => { setConnectionId(s.connectionId); setErr('') },
+              onContextMenu: (e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                const x = Math.min(e.clientX, Math.max(4, window.innerWidth - 160))
+                const y = Math.min(e.clientY, Math.max(4, window.innerHeight - 80))
+                setContextMenu({ connectionId: s.connectionId, x, y })
+              },
             },
             createElement('span', { className: 'dshssh-session-dot' + (s.connected ? ' ok' : '') }),
             createElement('span', { className: 'dshssh-session-copy' },
-              createElement('span', { className: 'dshssh-session-name' }, s.label || s.target || 'SSH 连接'),
+              createElement('span', { className: 'dshssh-session-name' },
+                s.pinned ? createElement('span', { className: 'dshssh-pin', title: '已置顶' }, '★') : null,
+                s.label || s.target || 'SSH 连接',
+              ),
               createElement('span', { className: 'dshssh-session-meta' }, s.connected ? (s.busy ? '执行中' : '已连接') : (s.historical ? '历史记录' : '已断开')),
             )))
             : createElement('div', { className: 'dshssh-empty' }, '暂无连接'),
@@ -213,6 +250,16 @@ function SshBody(props) {
         ),
         err ? createElement('div', { className: 'dshssh-err' }, String(err)) : null,
       ),
+      contextMenu && contextSession
+        ? createElement('div', {
+          className: 'dshssh-context-menu',
+          style: { left: contextMenu.x, top: contextMenu.y },
+          onClick: (e) => e.stopPropagation(),
+        },
+        createElement('button', { type: 'button', onClick: () => togglePinned(contextSession.connectionId) }, contextSession.pinned ? '取消置顶' : '置顶'),
+        createElement('button', { type: 'button', className: 'danger', onClick: () => deleteRecord(contextSession.connectionId) }, '删除该连接记录'),
+        )
+        : null,
     ),
   )
 }
