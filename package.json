@@ -1,6 +1,6 @@
 {
   "name": "dsh-ssh-terminal",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "SSH 远程终端：在 dsh-better-sidebar 侧边栏里连接远程主机，逐步查看命令与输出。",
   "author": "sunzhyang1616-ui",
   "license": "MIT",
