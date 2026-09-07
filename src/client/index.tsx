@@ -86,9 +86,10 @@ function SshBody(props) {
   const [connected, setConnected] = useState(false)
   const [target, setTarget] = useState('')
   const [steps, setSteps] = useState([])
-  const [logEl, setLogEl] = useState(null)
+  const logRef = useRef(null)
   const [contextMenu, setContextMenu] = useState(null)
   const refreshSeq = useRef(0)
+  const statusRevRef = useRef({})
 
   const selectedSession = sessions.find((s) => s.connectionId === connectionId)
   const contextSession = contextMenu && sessions.find((s) => s.connectionId === contextMenu.connectionId)
@@ -115,8 +116,13 @@ function SshBody(props) {
         setSteps([])
         return
       }
-      const t = await callApi('status', { connectionId: selected })
+      // Rev-gated status: the host answers with a tiny unchanged marker
+      // unless new steps appeared, so idle polling stays cheap.
+      const echoed = statusRevRef.current[selected] || 0
+      const t = await callApi('status', { connectionId: selected, rev: echoed })
       if (seq !== refreshSeq.current) return
+      if (t && t.unchanged) return
+      if (t && typeof t.rev === 'number') statusRevRef.current[selected] = t.rev
       setConnected(!!(t && t.connected))
       setTarget((t && t.target) || '')
       setSteps((t && t.steps) || [])
@@ -127,7 +133,7 @@ function SshBody(props) {
     injectCss()
     if (visible === false) { refreshSeq.current += 1; return }
     refresh(connectionId)
-    const stop = ctx.interval(() => refresh(connectionId), 600)
+    const stop = ctx.interval(() => refresh(connectionId), 1500)
     return () => {
       refreshSeq.current += 1
       try { stop() } catch (e) {}
@@ -135,11 +141,11 @@ function SshBody(props) {
   }, [visible, connectionId])
 
   useEffect(() => {
-    const el = logEl
+    const el = logRef.current
     if (!el) return
     const nearBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 40
     if (nearBottom) el.scrollTop = el.scrollHeight
-  }, [steps, logEl])
+  }, [steps])
 
   async function connect() {
     setBusy(true); setErr('')
@@ -245,7 +251,7 @@ function SshBody(props) {
           createElement('button', { className: 'dshssh-btn', disabled: busy || !canRun, onClick: run }, '执行'),
           createElement('button', { className: 'dshssh-btn', disabled: busy || !canRun, onClick: disconnect }, '断开'),
         ),
-        createElement('div', { className: 'dshssh-log', ref: (el) => setLogEl(el) },
+        createElement('div', { className: 'dshssh-log', ref: logRef },
           steps.length
             ? steps.map((s, i) => createElement('div', { key: i, className: 'dshssh-step dshssh-' + s.kind }, (fmt(s.ts) + '  ' + s.text)))
             : createElement('div', { className: 'dshssh-step dshssh-system' }, '还没有操作。'),
