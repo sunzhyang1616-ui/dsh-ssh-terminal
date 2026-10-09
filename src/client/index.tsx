@@ -41,6 +41,9 @@ const SSH_CSS = `
 .dshssh-btn{padding:4px 10px;border-radius:6px;border:1px solid var(--dsw-alias-border-l2,rgba(148,163,184,.4));background:var(--dsw-alias-interactive-bg-hover,rgba(148,163,184,.15));color:var(--dsw-alias-label-primary,inherit);cursor:pointer;font-size:12px;}
 .dshssh-btn:hover{background:var(--dsw-alias-interactive-bg-active,rgba(148,163,184,.28));}
 .dshssh-btn:disabled{opacity:.5;cursor:default;}
+.dshssh-logging.on{color:var(--dsw-alias-state-success-primary,#86efac);border-color:var(--dsw-alias-state-success-primary,rgba(134,239,172,.55));}
+.dshssh-logging.off{color:var(--dsw-alias-state-error-primary,#fca5a5);border-color:var(--dsw-alias-state-error-primary,rgba(252,165,165,.55));}
+.dshssh-note{padding:5px 8px;border-radius:6px;background:var(--dsw-alias-bg-layer-2,rgba(148,163,184,.08));color:var(--dsw-alias-label-tertiary,#94a3b8);font-size:11px;}
 .dshssh-log{flex:1;min-height:120px;overflow:auto;background:var(--dsw-alias-bg-layer-1,rgba(2,6,23,.55));border:1px solid var(--dsw-alias-border-l2,rgba(148,163,184,.25));border-radius:8px;padding:8px;font-family:var(--dsw-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:12px;line-height:1.45;white-space:pre-wrap;word-break:break-word;}
 .dshssh-step{margin:0 0 6px;}
 .dshssh-cmd{color:var(--dsw-alias-accent,#93c5fd);}
@@ -86,6 +89,8 @@ function SshBody(props) {
   const [connected, setConnected] = useState(false)
   const [target, setTarget] = useState('')
   const [steps, setSteps] = useState([])
+  const [logging, setLogging] = useState(true)
+  const [logPath, setLogPath] = useState('')
   const logRef = useRef(null)
   const [contextMenu, setContextMenu] = useState(null)
   const refreshSeq = useRef(0)
@@ -102,6 +107,8 @@ function SshBody(props) {
       if (seq !== refreshSeq.current) return
       const nextSessions = Array.isArray(list && list.sessions) ? list.sessions : []
       setSessions(nextSessions)
+      if (list && typeof list.logging === 'boolean') setLogging(list.logging)
+      if (list && typeof list.logPath === 'string') setLogPath(list.logPath)
       const preferred = preferredId || connectionId
       const selected = nextSessions.some((s) => s.connectionId === preferred)
         ? preferred
@@ -179,6 +186,17 @@ function SshBody(props) {
     } catch (e) { setErr(String((e && e.message) || e)) }
   }
 
+  async function toggleLogging() {
+    const next = !logging
+    setErr('')
+    setLogging(next)
+    try {
+      const r = await callApi('logging', { enabled: next })
+      if (r && r.error) { setErr(String(r.error)); setLogging(!next) }
+      await refresh(connectionId)
+    } catch (e) { setErr(String((e && e.message) || e)); setLogging(!next) }
+  }
+
   async function togglePinned(id) {
     setContextMenu(null)
     try {
@@ -201,13 +219,23 @@ function SshBody(props) {
 
   const onKey = (e) => { if (e.key === 'Enter' && canRun && !busy) run() }
   const status = connected ? ('● ' + target) : (selectedSession ? (selectedSession.exited ? '○ 已退出' : '○ 未连接') : '○ 未选择连接')
+  const logFile = logPath || '~/.dsh/ssh-terminal-history.json'
 
   return createElement('div', { className: 'dshssh-body', onClick: () => setContextMenu(null) },
     createElement('div', { className: 'dshssh-head' },
       createElement('span', { className: 'dshssh-title' }, 'SSH 远程终端'),
       createElement('span', { className: 'dshssh-status ' + (connected ? 'ok' : 'off') }, status),
+      createElement('button', {
+        className: 'dshssh-btn dshssh-logging ' + (logging ? 'on' : 'off'),
+        title: logging
+          ? '日志记录已开启：连接记录与终端交互会写入 ' + logFile
+          : '日志记录已关闭：不再写入 ' + logFile + '（已记录的历史会保留）',
+        onClick: toggleLogging,
+      }, logging ? '日志记录：开' : '日志记录：关'),
       createElement('button', { className: 'dshssh-btn dshssh-clear', onClick: clearHistory }, '清空当前'),
     ),
+    logging ? null : createElement('div', { className: 'dshssh-note' },
+      '日志记录已关闭：本次会话的交互仍会显示在面板中，但不会再写入 ' + logFile + '。'),
     createElement('div', { className: 'dshssh-layout' },
       createElement('div', { className: 'dshssh-sessions' },
         createElement('div', { className: 'dshssh-session-title' }, '连接列表 (' + sessions.length + ')'),

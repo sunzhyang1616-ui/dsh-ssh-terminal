@@ -2,6 +2,27 @@
 
 All notable changes to this project are documented in this file.
 
+## [Unreleased]
+
+### Added
+
+- **Log switch in the sidebar panel**: a `日志记录：开 / 关` (logging on/off)
+  button sits in the panel header next to `清空当前` and decides whether this
+  machine keeps writing `~/.dsh/ssh-terminal-history.json`.
+  - While it is off, connection records and terminal interaction are still
+    appended to the in-memory history, so the sidebar tab keeps rendering the
+    live transcript exactly as before — they are simply never written to disk.
+  - History already on disk is preserved when the switch is turned off, and
+    steps taken while it was off are not back-filled if it is turned on again.
+  - Explicit housekeeping actions (`clear`, `pin`, `delete`) still persist
+    immediately, and the shutdown flush is skipped while logging is off so the
+    in-memory steps cannot leak to the file.
+- The switch state is stored in the history file itself, which is written as
+  `version: 3` with a `logging` boolean; older `version: 2` files (and files
+  without the field) keep the previous "always record" behaviour.
+- The `list` API response now carries `logging` and `logPath`, which the panel
+  uses for the button state and its tooltip.
+
 ## [0.1.3] - 2026-09-08
 
 ### Fixed
